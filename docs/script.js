@@ -310,7 +310,7 @@ class EventHandler {
                 let note = Note.getNote(tab);
                 Note.destroyNote(note);
                 // POSTIT - TAB INDEX NEEDED to go to nearest tab
-                Note.showOnly(Note.instances[0]);
+                Note.showOnly(Note.instances[Note.instances.length - 1]);
             }
         }
     }
@@ -323,7 +323,7 @@ class EventHandler {
                 let note = Note.getNote(tab);
                 Note.closeNote(note);
                 // POSTIT - TAB INDEX NEEDED to go to nearest tab
-                Note.showOnly(Note.instances[0]);
+                Note.showOnly(Note.instances[Note.instances.length - 1]);
             }
         }
     }
