@@ -2,20 +2,25 @@
 // < Imports
 // < ========================================================
 
-import { utils } from "./utils.js";
+import { tools } from "./tools.js";
+import { DataTable } from "./table.js";
 
 // < ========================================================
 // < Element Queries
 // < ========================================================
 
 let page = document.getElementById('page');
+let centralContainer = document.getElementById('central-container');
+let tableContainer = document.getElementById('table-container');
+let tableButton = document.getElementById('table-button');
 let menuButton = document.getElementById('menu-button');
 let menuRail = document.getElementById('menu-rail');
 let tabRail = document.getElementById('tab-rail');
 let createButton = document.getElementById('create-button');
 let saveButton = document.getElementById('save-button');
-let loadButton = document.getElementById('load-button');
+// let loadButton = document.getElementById('load-button');
 let clearButton = document.getElementById('clear-button');
+let downloadButton = document.getElementById('download-button');
 
 // ! ========================================================
 // ! Interface
@@ -34,25 +39,83 @@ class Interface {
         for (let note of Note.instances) {
             Note.saveNote(note);
         }
+        StorageHandler.updateOpened();
+    }
+
+    // static updateCurrentNote(note) {
+    //     // StorageHandler.saveSetting('uuid', Interface.getCurrentNote().uuid);
+    //     StorageHandler.saveSetting('uuid', note.uuid);
+    // }
+
+    static reset() {
+        StorageHandler.reset();
+        Note.reset();
     }
 
     static loadAll() {
-        for (let [uuid, { title, text, tags }] of Object.entries(StorageHandler.dictionary)) {
-            Note.loadNote(uuid, title, text, tags);
+        for (let [uuid, { name, text, tags }] of Object.entries(StorageHandler.dictionary.notes)) {
+            let opened = StorageHandler.dictionary.settings['opened']
+            console.log(opened);
+            if (opened.includes(uuid)) {
+                console.log(uuid);
+                let note = Note.loadNote(uuid, name, text, tags);
+                Note.hideNote(note);
+            }
         }
     }
 
-    static readLocal() {
-        let note = Note.createNote();
-        note.text = StorageHandler.toString();
+    static toggleTable() {
+        let table = document.querySelector(".data-table");
+        if (table) {
+            table.remove();
+        }
+        else {
+            Note.showOnly(null);
+            const headers = ["uuid", "name", "text", "tags"]
+            const data = []
+            for (let [uuid, { name, text, tags }] of Object.entries(StorageHandler.dictionary.notes)) {
+                data.push([uuid, name, text, tags])
+            }
+            return new DataTable(tableContainer, headers, data);
+        }
     }
 
-    static objectify(string) {
-        return JSON.parse(string);
+    static downloadNotes(filename = 'notes.json') {
+        let key = 'notes2025-03-23';
+        const item = localStorage.getItem(key);
+
+        if (item) {
+            try {
+                // Parse the stringified JSON to ensure it's valid JSON
+                const parsedData = JSON.parse(item);
+
+                // Convert the parsed JSON back to a string for download
+                const jsonBlob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
+
+                // Create an anchor tag for downloading
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(jsonBlob);
+                link.download = filename;  // Set the filename for the downloaded file
+
+                // Trigger the download
+                link.click();
+            } catch (error) {
+                console.log('Error parsing JSON:', error);
+            }
+        } else {
+            console.log('Item not found in localStorage.');
+        }
     }
 
-    static stringify(object, indent = 2) {
-        return JSON.stringify(object, null, indent);
+    /** @returns {Note} */
+    static getCurrentNote() {
+        /** @param {Note[]} _ */
+        let notes = Note.instances;
+        for (let note of notes) {
+            if (!note.editor.classList.contains('hidden')) {
+                return note
+            }
+        }
     }
 
 }
@@ -65,64 +128,82 @@ class StorageHandler {
 
     static key = 'notes2025-03-23';
 
+    /** @returns {{ settings: object, notes: object }} */
+    static get defaultDictionary() {
+        return {
+            settings: {
+                uuid: null,
+                opened: []
+            },
+            notes: {}
+        }
+    }
+
+    /** @type {{ settings: object, notes: object }} */
     static dictionary;
 
-    static init() {
-        let string = localStorage.getItem(this.key);
-        if (string === null) {
-            string = '{}'
-            localStorage.setItem(this.key, string);
+    // < ========================================================
+
+    static save() {
+        let string = tools.stringify(StorageHandler.dictionary)
+        localStorage.setItem(this.key, string);
+    }
+
+    static load() {
+        let stored = localStorage.getItem(this.key);
+        if (stored === null) {
+            StorageHandler.reset();
         }
-        StorageHandler.dictionary = Interface.objectify(string);
+        else {
+            StorageHandler.dictionary = tools.objectify(stored);
+        }
+        // console.log(StorageHandler.dictionary.settings)
     }
 
-
-    close() {
-        this.tab.remove();
-        this.editor.remove();
-        let index = Note.instances.indexOf(this);
-        Note.instances.splice(index, 1);
+    static reset() {
+        StorageHandler.dictionary = StorageHandler.defaultDictionary;
+        StorageHandler.save();
     }
 
-    destroy() {
-        this.close();
-        StorageHandler.remove(this.uuid);
+    // < ========================================================
+
+    /** @param {Note} note */
+    static saveNote(note) {
+        console.log(`saving note ${note.uuid}`)
+        let notes = StorageHandler.dictionary.notes;
+        notes[note.uuid] = note.metadata;
+        StorageHandler.save();
     }
 
-    save() {
-        StorageHandler.add(this.uuid, {
-            title: this.title,
-            text: this.text,
-            tags: this.tags
-        });
+    /** @param {string} key @param {any} value */
+    static saveSetting(key, value) {
+        console.log(`saving setting ${key}: ${value}`)
+        let settings = StorageHandler.dictionary.settings;
+        settings[key] = value;
+        StorageHandler.save();
     }
 
+    // < ========================================================
 
-    static clear() {
-        StorageHandler.dictionary = {}
-        localStorage.setItem(this.key, '{}');
-        StorageHandler.save()
-    }
-
-    /**  @param {string} key @param {string} value */
-    static add(key, value) {
-        StorageHandler.dictionary[key] = value;
+    /**  @param {Note} note */
+    static removeNote(note) {
+        console.log(`removing note ${note.uuid}`)
+        let notes = StorageHandler.dictionary.notes;
+        delete notes[note.uuid];
         StorageHandler.save();
     }
 
     /**  @param {string} key */
-    static remove(key) {
-        delete StorageHandler.dictionary[key];
+    static removeSetting(key) {
+        console.log(`removing setting ${key}`)
+        let settings = StorageHandler.dictionary.settings;
+        delete settings[key];
         StorageHandler.save();
     }
 
-    static save() {
-        let string = Interface.stringify(StorageHandler.dictionary)
-        localStorage.setItem(this.key, string);
-    }
-
-    static toString() {
-        return JSON.stringify(StorageHandler.dictionary, null, 2);
+    static updateOpened() {
+        let settings = StorageHandler.dictionary.settings;
+        this.saveSetting('opened', Note.instances.map(note => note.uuid))
     }
 
 }
@@ -140,10 +221,10 @@ class Note {
     // < Methods for Note Instances
     // < ========================================================
 
-    constructor(uuid, title, text, tags) {
+    constructor(uuid, name, text, tags) {
         this.num = this.getNum();
         this.uuid = uuid ? uuid : crypto.randomUUID();
-        this.title = title ? title : 'note' + this.num;
+        this.name = name ? name : 'note' + this.num;
         this.tags = tags ? tags : [];
         this.tab = this.createTab();
         this.editor = this.createEditor();
@@ -161,10 +242,26 @@ class Note {
         let tab = document.createElement('div');
         tab.classList.add('tab');
         tab.id = 'tab' + this.num;
-        tab.innerText = this.title;
-        tabRail.insertBefore(tab, createButton);
-        tab.onclick = () => Note.showOnly(this);
+        tab.innerText = this.name;
         tab.title = this.uuid;
+
+        // > Ensure that clicking a tab brings it into focus
+        tab.addEventListener('click', () => {
+            Note.showOnly(this);
+        });
+
+        tab.addEventListener('dblclick', function () {
+            tab.contentEditable = true;
+            tab.focus();
+            tools.selectAll(tab);
+        });
+
+        tab.addEventListener('blur', () => {
+            Note.renameNote(this, tab.innerText);
+            tab.contentEditable = false;
+        });
+
+        tabRail.insertBefore(tab, createButton);
         return tab;
     }
 
@@ -172,10 +269,17 @@ class Note {
         let editor = document.createElement('div');
         editor.classList.add('editor');
         editor.id = 'editor' + this.num;
+
         let textarea = document.createElement('textarea');
         textarea.placeholder = editor.id;
+
+        // > Make editor save note accordingly
+        textarea.addEventListener('blur', () => {
+            Note.saveNote(this);
+        });
+
         editor.appendChild(textarea);
-        page.appendChild(editor);
+        centralContainer.appendChild(editor);
         return editor;
     }
 
@@ -188,20 +292,22 @@ class Note {
         return this.textarea.value;
     }
 
+    get metadata() {
+        return {
+            name: this.name,
+            text: this.text,
+            tags: this.tags,
+        }
+    }
+
     // < ========================================================
     // < Static Methods for Creation of Note Instances
     // < ========================================================
 
-    static createNote() {
-        let note = new Note();
-        Note.showOnly(note);
-        return note;
-    }
-
-    static loadNote(uuid, title, text, tags) {
-        utils.argcheck({ uuid, title, text, tags })
-        let note = new Note(uuid, title, text, tags);
-        Note.hideNote(note);
+    static loadNote(uuid, name, text, tags) {
+        tools.argcheck({ uuid, name, text, tags });
+        let note = new Note(uuid, name, text, tags);
+        // Note.hideNote(note);
         return note;
     }
 
@@ -218,10 +324,27 @@ class Note {
         }
     }
 
+    /** @returns {Note} */
+    static getNoteFromUUID(uuid) {
+        for (let instance of Note.instances) {
+            if (instance.uuid === uuid) {
+                return instance;
+            }
+        }
+    }
+
+    /** @param {Note} note */
+    static renameNote(note, name) {
+        note.name = name;
+        note.tab.innerText = name;
+        Note.saveNote(note);
+    }
+
     /** @param {Note} note */
     static showNote(note) {
         note.tab.classList.add('active');
-        note.editor.classList.remove('hidden')
+        note.editor.classList.remove('hidden');
+        StorageHandler.saveSetting('uuid', note.uuid);
     }
 
     /** @param {Note} note */
@@ -232,7 +355,7 @@ class Note {
 
     /** @param {Note} note */
     static showOnly(note) {
-        if (note === null) return;
+        if (note === null) console.log('hiding all notes');
         for (let instance of Note.instances) {
             if (instance !== note) {
                 Note.hideNote(instance);
@@ -244,26 +367,44 @@ class Note {
     }
 
     /** @param {Note} note */
+    static flashNote(note) {
+        if (!note) return;
+        note.tab.style.transition = 'opacity 0.2s';
+        note.tab.style.opacity = '0.5';
+        setTimeout(() => note.tab.style.opacity = '1', 200);
+    }
+
+    /** @param {Note} note */
     static closeNote(note) {
         note.tab.remove();
         note.editor.remove();
         let index = Note.instances.indexOf(note);
         Note.instances.splice(index, 1);
+        StorageHandler.updateOpened();
     }
 
     /** @param {Note} note */
-    static destroyNote(note) {
+    static removeNote(note) {
         Note.closeNote(note);
-        StorageHandler.remove(note.uuid);
+        StorageHandler.removeNote(note);
     }
 
     /** @param {Note} note */
     static saveNote(note) {
-        StorageHandler.add(note.uuid, {
-            title: note.title,
-            text: note.text,
-            tags: note.tags
-        });
+        Note.flashNote(note);
+        StorageHandler.saveNote(note);
+    }
+
+    // < ========================================================
+
+    static reset() {
+        for (let note of Note.instances) {
+            note.tab.remove();
+            note.editor.remove();
+        }
+        Note.instances = [];
+        // POSTIT
+        StorageHandler.updateOpened();
     }
 
 }
@@ -302,16 +443,22 @@ class EventHandler {
         if (event.ctrlKey && event.key === 's') {
             event.preventDefault();
             Interface.saveAll();
-            alert('Saved')
+            // alert('Saved')
         }
         else if (event.key === 'Delete') {
             let tab = EventHandler.hovered('.tab');
             if (tab) {
                 let note = Note.getNote(tab);
-                Note.destroyNote(note);
+                Note.removeNote(note);
                 // POSTIT - TAB INDEX NEEDED to go to nearest tab
                 Note.showOnly(Note.instances[Note.instances.length - 1]);
             }
+        }
+        else if (event.key === 'p') {
+            // alert('renaming');
+            // Note.renameNote(Note.instances[0], 'RENAMED');
+            // console.log(Interface.getCurrentNote())
+
         }
     }
 
@@ -334,11 +481,17 @@ class EventHandler {
         document.addEventListener("mousedown", EventHandler.mousedown);
         document.addEventListener("keydown", EventHandler.keydown);
         document.addEventListener("mouseover", EventHandler.mousemove);
-        menuButton.addEventListener("click", Interface.toggleMenuRail);
-        saveButton.addEventListener("click", Interface.saveAll);
-        loadButton.addEventListener("click", Interface.readLocal);
-        clearButton.addEventListener("click", StorageHandler.clear);
-        createButton.addEventListener("click", Note.createNote);
+        createButton.addEventListener("click", () => {
+            let note = new Note();
+            Note.showOnly(note);
+            StorageHandler.saveNote(note);
+            StorageHandler.updateOpened();
+        });
+        clearButton.addEventListener("click", () => Interface.reset());
+        menuButton.addEventListener("click", () => Interface.toggleMenuRail());
+        saveButton.addEventListener("click", () => Interface.saveAll());
+        tableButton.addEventListener("click", () => Interface.toggleTable());
+        downloadButton.addEventListener("click", () => Interface.downloadNotes());
     }
 
 }
@@ -351,20 +504,42 @@ class EventHandler {
 function main() {
 
     EventHandler.init();
-    StorageHandler.init();
+    StorageHandler.load();
 
     Interface.loadAll();
 
-    Note.showOnly(Note.instances[Note.instances.length - 1]);
+    let uuid = StorageHandler.dictionary.settings['uuid'];
+    if (uuid != null) {
+        for (let note of Note.instances) {
+            if (note.uuid === uuid) {
+                Note.showOnly(note);
+            }
+        }
+    }
 
     // Add file system viewer
     // Add ability to rename notes / tabs
-    // Add ability to move tabs
-    // Add ability to pin tabs
+    // ! Add ability to move tabs
+    // ! Add ability to pin tabs
 
-    setInterval(() => {
-        Interface.saveAll();
-    }, 5000);
+    let buttons = document.querySelectorAll('.rail-button');
+    buttons.forEach(button => button.title = button.id.replace('-button', ''))
+
+    document.addEventListener('dataTableEvent', event => {
+        let value = event.detail.uuid;
+        // console.log(value, '< Value from event')
+        let current = Note.getNoteFromUUID(value);
+        // console.log(typeof current, '< Note from event value');
+        if (current) {
+            // console.warn('returning');
+            return;
+        }
+        let { name, text, tags } = StorageHandler.dictionary.notes[value];
+        let x = Note.loadNote(value, name, text, tags);
+        Note.hideNote(x);
+        // console.log(x.uuid, '< HERE');
+        StorageHandler.updateOpened();
+    });
 
 }
 

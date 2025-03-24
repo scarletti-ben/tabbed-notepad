@@ -10,7 +10,8 @@
   --scrollbar-colour: var(--scrollbar-slider) var(--scrollbar-gutter);
 }
 
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   margin: 0px;
@@ -30,11 +31,12 @@ html, body {
   height: 100%;
   width: 100%;
   padding: 16px;
+  position: relative;
   box-sizing: border-box;
 }
 
 .hidden {
-  display: none !important; 
+  display: none !important;
 }
 
 .active {
@@ -42,6 +44,12 @@ html, body {
 }
 
 /* ! ====================================================== ! */
+
+#central-container {
+  height: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
 
 .rail {
   height: 32px;
@@ -55,7 +63,7 @@ html, body {
   justify-content: left;
   align-items: center;
   /* POSTIT GAP */
-  gap: 4px; 
+  gap: 4px;
   /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); */
 }
 
@@ -78,19 +86,12 @@ html, body {
   cursor: pointer;
   font-size: 14px;
   font-family: 'Courier New', Courier, monospace;
-  font-weight: bold;
-
-  /* height: 24px; */
-  /* line-height: 20px; */
+  font-weight: 500;
   padding: 0px 16px 0px 16px;
-  /* padding: 4px 16px 0px 16px; */
-
-  /* background-color: rgba(1, 1, 71, 0.384); */
   background-color: rgb(60, 60, 60);
-  /* border-radius: 18px; */
-  border-top-left-radius: 14px;   /* Top-left corner rounded */
-  border-top-right-radius: 14px;  /* Top-right corner rounded */
-  border-bottom: none;            /* Remove bottom border */
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  border-bottom: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -121,3 +122,94 @@ textarea::placeholder {
   font-size: 16px;
   opacity: 1;
 }
+
+/* ! ====================================================== !
+! DataTable Styles
+! ====================================================== ! */
+
+#table-container {
+  height: 100%;
+  width: 100%;
+  margin: 0px;
+  padding: 0px;
+  box-sizing: border-box;
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  /* background-color: red; */
+}
+
+/* Table styles */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  /* margin: 25px 0; */
+  font-size: 14px;
+  min-width: 400px;
+  margin: 0px;
+  position: relative;
+  /* border-radius: 16px 16px 0 0; */
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  font-family: 'Courier New', Courier, monospace;
+  /* font-family: Verdana, Geneva, Tahoma, sans-serif; */
+}
+
+.data-table thead tr {
+  background-color: #009879;
+  color: #ffffff;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 15px;
+  text-align: center;
+}
+
+/* Ensure th elements are relative for absolute positioning of resizer */
+.data-table th {
+  position: relative;
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid #dddddd;
+}
+
+/* .data-table tbody tr:nth-of-type(even) {
+  background-color: rgba(101, 101, 101, 0.5);
+} */
+
+.data-table tbody tr:last-of-type {
+  border-bottom: 2px solid #009879;
+}
+
+.data-table tbody tr.active-row {
+  font-weight: bold;
+  color: #009879;
+}
+
+/* Resizer Styles */
+.resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  cursor: col-resize;
+  user-select: none;
+  /* z-index: 1; */
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: background-color 0.2s;
+}
+
+.resizer:hover,
+.resizer.resizing {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+
+/* ! ====================================================== !
+! 
+! ====================================================== ! */
