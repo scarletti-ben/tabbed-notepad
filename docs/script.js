@@ -65,6 +65,7 @@ class Interface {
     }
 
     static toggleTable() {
+        tableContainer.classList.toggle('hidden')
         let table = document.querySelector(".data-table");
         if (table) {
             table.remove();
@@ -521,6 +522,7 @@ function main() {
     // Add ability to rename notes / tabs
     // ! Add ability to move tabs
     // ! Add ability to pin tabs
+    // POSTIT - Overhaul of certain function combinations to named functions
 
     let buttons = document.querySelectorAll('.rail-button');
     buttons.forEach(button => button.title = button.id.replace('-button', ''))
