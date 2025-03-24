@@ -19,7 +19,7 @@ let tabRail = document.getElementById('tab-rail');
 let createButton = document.getElementById('create-button');
 let saveButton = document.getElementById('save-button');
 // let loadButton = document.getElementById('load-button');
-let clearButton = document.getElementById('clear-button');
+let resetButton = document.getElementById('reset-button');
 let downloadButton = document.getElementById('download-button');
 
 // ! ========================================================
@@ -488,7 +488,12 @@ class EventHandler {
             StorageHandler.saveNote(note);
             StorageHandler.updateOpened();
         });
-        clearButton.addEventListener("click", () => Interface.reset());
+        resetButton.addEventListener("click", () => {
+            let answer = confirm('This will reset and delete all notes, are you sure?')
+            if (answer === true) {
+                Interface.reset()
+            }
+        });
         menuButton.addEventListener("click", () => Interface.toggleMenuRail());
         saveButton.addEventListener("click", () => Interface.saveAll());
         tableButton.addEventListener("click", () => Interface.toggleTable());
